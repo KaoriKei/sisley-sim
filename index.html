@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sisley 決算期比較シミュレーション</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", sans-serif; background: #f5f5f5; color: #333; padding: 24px; }
+  .container { max-width: 1060px; margin: 0 auto; }
+  h1 { font-size: 22px; color: #B01568; border-bottom: 3px solid #E91E8C; padding-bottom: 8px; margin-bottom: 4px; }
+  .subtitle { color: #666; font-size: 13px; margin-bottom: 24px; }
+  .compare-header { display: flex; gap: 12px; margin-bottom: 20px; }
+  .compare-card { flex: 1; border-radius: 10px; padding: 16px; text-align: center; color: #fff; }
+  .compare-card.jan { background: linear-gradient(135deg, #5C6BC0, #3949AB); }
+  .compare-card.feb-now { background: linear-gradient(135deg, #E91E8C, #B01568); }
+  .compare-card.feb-plus { background: linear-gradient(135deg, #C62828, #8E0000); }
+  .compare-card .period-label { font-size: 10px; opacity: 0.85; letter-spacing: 1px; }
+  .compare-card .title { font-size: 16px; font-weight: 700; margin: 4px 0 2px; }
+  .compare-card .period-detail { font-size: 11px; opacity: 0.8; margin-bottom: 10px; }
+  .compare-card .big-num { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+  .compare-card .big-sub { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+  .compare-card .tax-line { font-size: 15px; font-weight: 700; margin-top: 8px; background: rgba(255,255,255,0.2); border-radius: 6px; padding: 6px 10px; display: inline-block; letter-spacing: 0.5px; }
+  .compare-card .tax-note { font-size: 9px; opacity: 0.7; margin-top: 4px; }
+  .compare-card .tag { display: inline-block; background: rgba(255,255,255,0.2); border-radius: 12px; padding: 2px 10px; font-size: 10px; margin-top: 6px; }
+  .card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 16px; }
+  .card h2 { font-size: 16px; color: #B01568; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #f0e0e8; }
+  .card h3 { font-size: 14px; color: #555; margin: 12px 0 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { padding: 8px 10px; text-align: right; font-weight: 600; }
+  th:first-child { text-align: left; }
+  th.col-a { background: #5C6BC0; color: #fff; }
+  th.col-b { background: #E91E8C; color: #fff; }
+  th.col-c { background: #C62828; color: #fff; }
+  th.col-label { background: #424242; color: #fff; text-align: left; }
+  th.col-diff { background: #FF8F00; color: #fff; }
+  td { padding: 7px 10px; border-bottom: 1px solid #eee; text-align: right; }
+  td:first-child { text-align: left; font-weight: 500; }
+  tr.subtotal { background: #f5f5f5; font-weight: 600; }
+  tr.total { font-weight: 700; }
+  tr.total td { border-top: 2px solid #333; border-bottom: 2px solid #333; font-size: 14px; }
+  .num-pos { color: #c62828; }
+  .num-neg { color: #1565c0; }
+  .sub-row { padding-left: 24px !important; color: #888 !important; font-weight: 400 !important; }
+  .note { font-size: 11px; color: #999; margin-top: 6px; }
+  .edit-note { background: #fff3e0; border-left: 3px solid #FF8F00; padding: 8px 12px; font-size: 12px; color: #666; margin-top: 12px; border-radius: 0 4px 4px 0; }
+  .position-grid { display: flex; gap: 16px; }
+  .position-grid .half { flex: 1; }
+  .position-grid h3 { font-size: 14px; color: #555; margin-bottom: 6px; padding: 4px 0; border-bottom: 1px solid #ddd; }
+  .position-grid table th { font-size: 12px; }
+  .genbiki-highlight { background: #e8f5e9; }
+  .assumptions { background: #f5f5f5; border-radius: 6px; padding: 12px 16px; font-size: 12px; color: #666; margin-top: 8px; }
+  .assumptions strong { color: #333; }
+  @media print { body { padding: 8px; } .card { box-shadow: none; border: 1px solid #ddd; page-break-inside: avoid; } }
+  @media (max-width: 700px) { .compare-header { flex-direction: column; } .position-grid { flex-direction: column; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Sisley 決算期比較シミュレーション</h1>
+<div class="subtitle">1月決算（期変更） vs 2月決算（現行） 着地比較 ｜ 作成日: 2026/2/11 ｜ 作成: 松本</div>
+
+<!-- ===== ヘッダー ===== -->
+<div class="compare-header">
+  <div class="compare-card jan">
+    <div class="period-label">SCENARIO A</div>
+    <div class="title">1月決算（期変更）</div>
+    <div class="period-detail">期首 2025/3 → 期末 2026/1（11ヶ月）</div>
+    <div class="big-num">3,502万</div>
+    <div class="big-sub">期末着地 35,024,324円</div>
+    <div class="tax-line">納税予測 ¥12,544,874</div>
+    <div class="tax-note">※法人税のみ。消費税は含まず</div>
+    <div class="tag">確定値</div>
+  </div>
+  <div class="compare-card feb-now">
+    <div class="period-label">SCENARIO B</div>
+    <div class="title">2月決算（2/11実績）</div>
+    <div class="period-detail">期首 2025/3 → 期末 2026/2（12ヶ月）</div>
+    <div class="big-num">4,576万</div>
+    <div class="big-sub">期末着地 45,759,232円</div>
+    <div class="tax-line">納税予測 ¥16,542,296</div>
+    <div class="tax-note">※法人税のみ。消費税は含まず</div>
+    <div class="tag">2/11時点 実績ベース</div>
+  </div>
+  <div class="compare-card feb-plus">
+    <div class="period-label">SCENARIO C</div>
+    <div class="title">2月決算（+2%）</div>
+    <div class="period-detail">2/11から株価+2%で2/28着地</div>
+    <div class="big-num">4,926万</div>
+    <div class="big-sub">期末着地 49,263,363円</div>
+    <div class="tax-line">納税予測 ¥17,847,150</div>
+    <div class="tax-note">※法人税のみ。消費税は含まず</div>
+    <div class="tag">+2%シナリオ予測</div>
+  </div>
+</div>
+
+<!-- ===== 課税着地テーブル ===== -->
+<div class="card">
+  <h2>通期損益 ＆ 課税着地</h2>
+  <table>
+    <tr>
+      <th class="col-label" style="width:30%">項目</th>
+      <th class="col-a" style="width:20%">A. 1月着地</th>
+      <th class="col-b" style="width:20%">B. 2/11実績</th>
+      <th class="col-c" style="width:20%">C. 2/28(+2%)</th>
+    </tr>
+    <tr><td>総資産</td><td>118,452,027</td><td>153,851,395</td><td>159,464,068</td></tr>
+    <tr><td>当期累計（証券+クリプト）</td><td>47,253,974</td><td>67,653,342</td><td>73,266,015</td></tr>
+    <tr><td class="sub-row">├ 3月〜1月 実績</td><td style="color:#888">47,253,974</td><td style="color:#888">47,253,974</td><td style="color:#888">47,253,974</td></tr>
+    <tr><td class="sub-row">└ 2月分</td><td style="color:#888">-</td><td style="color:#888">+20,399,368</td><td style="color:#888">+26,012,041</td></tr>
+    <tr style="background:#fef8f0;"><td>期首 現物含み</td><td>8,645,970</td><td>8,645,970</td><td>8,645,970</td></tr>
+    <tr style="background:#fef8f0;"><td>月末 現物含み</td><td>5,875,620</td><td>15,540,080</td><td>17,648,622</td></tr>
+    <tr style="background:#fef8f0;"><td>現物含み変動（非課税→差引）</td><td>▲2,770,350</td><td>+6,894,110</td><td>+9,002,652</td></tr>
+    <tr class="subtotal"><td>資産運用 課税着地</td><td>50,024,324</td><td>60,759,232</td><td>64,263,363</td></tr>
+    <tr><td>経費・その他損益（仮）</td><td>-15,000,000</td><td>-15,000,000</td><td>-15,000,000</td></tr>
+    <tr class="total"><td>期末着地予測</td><td>35,024,324</td><td>45,759,232</td><td>49,263,363</td></tr>
+    <tr style="background:#fff3e0;"><td><strong>予測納税額</strong></td><td><strong>¥12,544,874</strong></td><td><strong>¥16,542,296</strong></td><td><strong>¥17,847,150</strong></td></tr>
+  </table>
+  <div class="edit-note">
+    ⚠ 経費は仮置き▲15,000,000。確定後に松本が更新予定。
+  </div>
+  <div class="note">
+    ※ 課税着地 = 当期累計 −（月末現物含み − 期首現物含み）。信用含みは課税対象のため差引しない。<br>
+    ※ 納税額 = 累進税率（〜400万:22.61%, 〜800万:25.18%, 800万超:37.24%）+ 均等割7万 + バッファ50万円
+  </div>
+</div>
+
+<!-- ===== +2% 内訳 ===== -->
+<div class="card">
+  <h2>+2%シナリオ 内訳（C: 2/11→2/28）</h2>
+  <table>
+    <tr>
+      <th class="col-label">ポジション</th>
+      <th class="col-b">評価額（2/11）</th>
+      <th class="col-c">+2% 増加分</th>
+      <th class="col-diff">課税影響</th>
+    </tr>
+    <tr><td>SBI 国内現物</td><td>72,476,520</td><td class="num-pos">+1,449,530</td><td style="color:#888">なし</td></tr>
+    <tr><td>SBI 国内信用（建玉）</td><td>98,219,780</td><td class="num-pos">+1,964,396</td><td class="num-pos">+1,964,396</td></tr>
+    <tr><td>マネックス 国内現物</td><td>32,950,600</td><td class="num-pos">+659,012</td><td style="color:#888">なし</td></tr>
+    <tr><td>マネックス 国内信用（建玉）</td><td>76,986,750</td><td class="num-pos">+1,539,735</td><td class="num-pos">+1,539,735</td></tr>
+    <tr class="subtotal"><td>合計</td><td></td><td class="num-pos">+5,612,673</td><td class="num-pos">+3,504,131</td></tr>
+  </table>
+  <div class="note">※ 現物+2%は含みで相殺→課税影響なし。信用+2%は全額課税着地に影響。</div>
+</div>
+
+<!-- ===== ポジション詳細 ===== -->
+<div class="card">
+  <h2>2/11 ブローカー別ポジション</h2>
+  <div class="position-grid">
+    <div class="half">
+      <h3>SBI証券</h3>
+      <table>
+        <tr><th class="col-label" style="font-size:11px">項目</th><th class="col-b" style="font-size:11px">2/11</th><th class="col-c" style="font-size:11px">+2%後</th></tr>
+        <tr><td>国内現物</td><td>72,476,520</td><td>73,926,050</td></tr>
+        <tr><td>現物含み</td><td>11,989,780</td><td>13,439,310</td></tr>
+        <tr><td>信用建玉</td><td>98,219,780</td><td style="color:#888">-</td></tr>
+        <tr><td>信用含み</td><td>18,018,253</td><td>19,982,649</td></tr>
+        <tr><td>預かりJPY</td><td>3,605,392</td><td>3,605,392</td></tr>
+        <tr><td>預かりUSD換算</td><td>18,135,942</td><td>18,135,942</td></tr>
+        <tr class="subtotal"><td>SBI合計</td><td>112,236,107</td><td>115,650,033</td></tr>
+      </table>
+    </div>
+    <div class="half">
+      <h3>マネックス証券</h3>
+      <table>
+        <tr><th class="col-label" style="font-size:11px">項目</th><th class="col-b" style="font-size:11px">2/11</th><th class="col-c" style="font-size:11px">+2%後</th></tr>
+        <tr><td>国内現物</td><td>32,950,600</td><td>33,609,612</td></tr>
+        <tr><td>現物含み</td><td>3,550,300</td><td>4,209,312</td></tr>
+        <tr><td>信用建玉</td><td>76,986,750</td><td style="color:#888">-</td></tr>
+        <tr><td>信用含み</td><td>3,259,091</td><td>4,798,826</td></tr>
+        <tr><td>預かりJPY</td><td>5,405,597</td><td>5,405,597</td></tr>
+        <tr class="subtotal"><td>マネ合計</td><td>41,615,288</td><td>43,814,035</td></tr>
+      </table>
+    </div>
+  </div>
+  <table style="margin-top:12px;">
+    <tr style="background:#333;color:#fff;font-weight:700;">
+      <td style="text-align:left;color:#fff">Sisley 総合計</td>
+      <td style="color:#fff">153,851,395</td>
+      <td style="color:#fff">159,464,068</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ===== 信用建玉 現引きシミュレーション ===== -->
+<div class="card">
+  <h2>信用建玉 現引きシミュレーション</h2>
+  <div class="note" style="margin-bottom:12px;">
+    現引き = 信用建玉を現物に変換。信用含み損益（課税対象）→ 現物含み損益（非課税）に転換され、課税着地が減少する。<br>
+    含み益が大きい銘柄ほど現引きの税効果が高い。限界税率 37.24% で試算。
+  </div>
+
+  <table>
+    <tr>
+      <th class="col-label" style="font-size:11px">証券</th>
+      <th class="col-label" style="font-size:11px">コード</th>
+      <th class="col-label" style="font-size:11px;text-align:left">銘柄</th>
+      <th class="col-label" style="font-size:11px">数量</th>
+      <th class="col-label" style="font-size:11px">建金額</th>
+      <th class="col-diff" style="font-size:11px">含み損益</th>
+      <th style="background:#2E7D32;color:#fff;font-size:11px;text-align:right">税効果</th>
+    </tr>
+    <tr style="background:#fef8f0;">
+      <td style="font-size:12px">マネックス</td>
+      <td style="font-size:12px">5821</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">平河ヒューテック</td>
+      <td>2,100</td>
+      <td>5,854,000</td>
+      <td class="num-pos">2,586,846</td>
+      <td class="num-pos">963,279</td>
+    </tr>
+    <tr style="background:#fef8f0;">
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">6638</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Ｍｉｍａｋｉ</td>
+      <td>7,800</td>
+      <td>12,212,270</td>
+      <td class="num-pos">2,435,138</td>
+      <td class="num-pos">906,787</td>
+    </tr>
+    <tr style="background:#fef8f0;">
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">5989</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">エイチワン</td>
+      <td>10,400</td>
+      <td>13,235,520</td>
+      <td class="num-pos">2,248,348</td>
+      <td class="num-pos">837,231</td>
+    </tr>
+    <tr style="background:#fef8f0;">
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">5706</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">三井金属</td>
+      <td>500</td>
+      <td>9,832,500</td>
+      <td class="num-pos">1,861,523</td>
+      <td class="num-pos">693,186</td>
+    </tr>
+    <tr style="background:#fef8f0;">
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">1515</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">日鉄鉱</td>
+      <td>1,100</td>
+      <td>2,845,700</td>
+      <td class="num-pos">1,486,080</td>
+      <td class="num-pos">553,381</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">5714</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">ＤＯＷＡ</td>
+      <td>600</td>
+      <td>4,521,180</td>
+      <td class="num-pos">1,387,553</td>
+      <td class="num-pos">516,691</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">6946</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">日アビオ</td>
+      <td>700</td>
+      <td>3,429,000</td>
+      <td class="num-pos">1,377,651</td>
+      <td class="num-pos">513,004</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">マネックス</td>
+      <td style="font-size:12px">8088</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">岩谷産業</td>
+      <td>6,800</td>
+      <td>12,588,050</td>
+      <td class="num-pos">852,482</td>
+      <td class="num-pos">317,444</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">6269</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">三井海洋</td>
+      <td>200</td>
+      <td>2,373,300</td>
+      <td class="num-pos">734,835</td>
+      <td class="num-pos">273,635</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">5541</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">大平洋金</td>
+      <td>1,000</td>
+      <td>2,271,320</td>
+      <td class="num-pos">654,146</td>
+      <td class="num-pos">243,588</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">6330</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">洋エンジ</td>
+      <td>200</td>
+      <td>614,400</td>
+      <td class="num-pos">640,911</td>
+      <td class="num-pos">238,660</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">5471</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">大同特鋼</td>
+      <td>2,500</td>
+      <td>4,570,960</td>
+      <td class="num-pos">570,192</td>
+      <td class="num-pos">212,326</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">2768</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">双日</td>
+      <td>500</td>
+      <td>2,641,700</td>
+      <td class="num-pos">518,599</td>
+      <td class="num-pos">193,114</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">6594</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">ニデック</td>
+      <td>1,700</td>
+      <td>3,544,600</td>
+      <td class="num-pos">504,569</td>
+      <td class="num-pos">187,889</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">マネックス</td>
+      <td style="font-size:12px">7245</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">大同メタル工業</td>
+      <td>3,600</td>
+      <td>3,720,600</td>
+      <td class="num-pos">411,021</td>
+      <td class="num-pos">153,054</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">マネックス</td>
+      <td style="font-size:12px">6674</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">ジーエス・ユアサ　コーポレーション</td>
+      <td>500</td>
+      <td>1,829,600</td>
+      <td class="num-pos">404,757</td>
+      <td class="num-pos">150,722</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">マネックス</td>
+      <td style="font-size:12px">4063</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">信越化学工業</td>
+      <td>700</td>
+      <td>3,448,200</td>
+      <td class="num-pos">360,798</td>
+      <td class="num-pos">134,353</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">1768</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">ソネック</td>
+      <td>500</td>
+      <td>469,000</td>
+      <td class="num-pos">339,798</td>
+      <td class="num-pos">126,533</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">マネックス</td>
+      <td style="font-size:12px">6762</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">ＴＤＫ</td>
+      <td>2,200</td>
+      <td>4,764,900</td>
+      <td class="num-pos">323,457</td>
+      <td class="num-pos">120,448</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">マネックス</td>
+      <td style="font-size:12px">6637</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">寺崎電気産業</td>
+      <td>1,100</td>
+      <td>4,932,000</td>
+      <td class="num-pos">315,999</td>
+      <td class="num-pos">117,670</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">6762</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">ＴＤＫ</td>
+      <td>1,800</td>
+      <td>3,876,450</td>
+      <td class="num-pos">288,841</td>
+      <td class="num-pos">107,557</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">5724</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">アサカ理研</td>
+      <td>300</td>
+      <td>955,500</td>
+      <td class="num-pos">280,898</td>
+      <td class="num-pos">104,600</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">3321</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">ミタチ</td>
+      <td>300</td>
+      <td>382,400</td>
+      <td class="num-pos">276,250</td>
+      <td class="num-pos">102,869</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">7011</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">三菱重</td>
+      <td>300</td>
+      <td>1,274,700</td>
+      <td class="num-pos">253,968</td>
+      <td class="num-pos">94,572</td>
+    </tr>
+    <tr>
+      <td style="font-size:12px">SBI</td>
+      <td style="font-size:12px">5821</td>
+      <td style="font-size:12px;text-align:left;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">平河ヒューテ</td>
+      <td>200</td>
+      <td>560,600</td>
+      <td class="num-pos">243,455</td>
+      <td class="num-pos">90,657</td>
+    </tr>
+    <tr class="total">
+      <td colspan="4" style="text-align:left">含み益 建玉合計（51銘柄）</td>
+      <td>106,748,450</td>
+      <td class="num-pos">21,358,115</td>
+      <td class="num-pos">7,953,249</td>
+    </tr>
+  </table>
+
+  <div style="margin-top:12px;padding:12px;background:#e8f5e9;border-radius:6px;font-size:13px;">
+    <strong>現引き効果サマリー:</strong><br>
+    ・含み益のある全建玉を現引きした場合の税効果: <strong class="num-pos">▲7,953,249円</strong>（課税着地削減）<br>
+    ・現引きに必要な資金: <strong>106,748,450円</strong><br>
+    ・含み損のある建玉: 7銘柄、計 -2,710,333円（現引き対象外）
+  </div>
+
+  <div class="note" style="margin-top:8px;">
+    ※ 現引き必要資金 = 建金額（建単価 × 数量）。預かり金から充当可能な分は別途確認。<br>
+    ※ 上位5銘柄（黄色背景）は特に税効果が大きい推奨対象。<br>
+    ※ 含み損の建玉は現引きすると損失が非課税化してしまうため対象外。
+  </div>
+</div>
+
+<!-- ===== 前提条件 ===== -->
+<div class="assumptions">
+  <strong>前提条件：</strong><br>
+  ① Scenario Cは2/11時点から株価一律+2%上昇と仮定<br>
+  ② 信用建玉は全て「買い」<br>
+  ③ 為替レートは2/11時点(155.14)のまま<br>
+  ④ 入出金は15,000,000円（マネックスへ資金移動）のみ<br>
+  ⑤ 米国株・クリプトはゼロ<br>
+  ⑥ 経費仮置き ▲15,000,000（松本確定後更新）<br>
+  ⑦ 課税着地 = 当期累計 −（月末現物含み − 期首現物含み）。信用含みは課税対象<br>
+  ⑧ 納税額 = 累進3段階（〜400万22.61%, 〜800万25.18%, 800万超37.24%）+ 均等割7万 + バッファ50万<br>
+  ⑨ 現引き税効果は限界税率37.24%で試算（期末着地が800万超の前提）
+</div>
+
+</div>
+</body>
+</html>
